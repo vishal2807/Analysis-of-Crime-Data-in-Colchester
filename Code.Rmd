@@ -1,0 +1,366 @@
+---
+title: "Analysis of Crime Data in Colchester"
+author: "Vishal Bachal"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,include = TRUE,warning = FALSE,message = FALSE,comment=NA)
+```
+
+
+
+```{r,include=TRUE }
+#First need to download this Libraries for Visualization or interactive  plots
+
+# Load Required Libraries
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+#install.packages("reshape2")
+library(reshape2)
+#install.packages("GGally")
+library(GGally)
+#install.packages("zoo")
+library(zoo)
+#install.packages("ggmap")
+library(ggmap)
+#install.packages("leaflet")
+library(leaflet)
+#install.packages("plotly")
+library(plotly)
+
+#install.packages("mapview")
+library(mapview)
+
+# Set working directory
+setwd("D:/git/Analysis of Crime Data in Colchester")
+
+# Read the crime data
+crime23_data <- read.csv("crime23.csv")
+
+```
+
+### Summary 
+The full analysis of the provided data has been undertaken and a report has been produced considering all the variants. The conclusion has been drawn at the end of this analysis.
+
+### Table of Contents
+
+#### 1 Introduction
+#### 2 Analysis
+###### 2.1 Descriptive Statistics
+###### 2.2 Visulization
+#### 3 Conclusion
+
+
+### 1 Introduction:
+
+ In this report, we're going to explore the Crime23 data set, which contains information about crimes in a specific area during a certain time period. By using data visualization, we may gain a better knowledge of the distribution of crimes across different categories and high-risk areas, as well as look at the link between different crime types and their effects.We'll use graphs and charts to see if there are any patterns or trends in how and when these crimes happen. By doing this, we hope to learn more about why crimes occur and how we can prevent them from happening in the future.
+
+
+
+### 2 Analysis
+
+##### 2.1 Descriptive Statistics:
+
+```{r,include=FALSE,results='hide'}
+# Check data structure
+str(crime23_data)
+
+head(crime23_data)
+
+summary(crime23_data)
+
+
+# Display a summary table
+summary_table <- table(crime23_data$category)
+print(summary_table)
+```
+
+```{r}
+# Two-way table of Crime Category and Outcome Status
+two_way_table <- table(crime23_data$category, crime23_data$outcome_status)
+two_way_table 
+```
+I see a remarkably high number of 1299 violent crime incidents where we were "unable to prosecute the suspect." Furthermore, 247 incidents of violent crimes are "still under active investigation." Alarmingly, there were 595 violent crime incidents where "our investigation was complete but no suspect could be identified at all." These numbers show that it is extremely difficult to find, capture, and convict violent criminals.
+Shoplifting seems to be another problematic area, with 51 and 45 cases "awaiting court outcomes, potentially straining judicial resources." Furthermore, 76 shoplifting cases resulted in "suspects going uncharged due to an inability to prosecute."However, I note that 34 shoplifting incidents were resolved through local resolution measures.
+
+Criminal damage and arson show 363 cases where no suspect was found despite completed investigations."Unable to prosecute suspect" was an issue in 117 of these cases as well.
+A total of 218 instances involving "public order crimes" were resolved locally, while 44 cases remain open and "under investigation currently."
+19 ongoing cases are still under investigation, while 98 drug-related occurrences were settled locally.
+
+It's interesting to note that several crime categories, such as anti-social behavior and bicycle theft, had zero cases in result categories like "Formal action not in the public interest" or "Further investigation not in the public interest." More research is needed to determine the causes of this selective filtering.
+
+```{r,include=FALSE,echo=FALSE}
+
+table(crime23_data$location_type, crime23_data$category)
+
+```
+
+
+
+```{r}
+
+crime23_data %>%
+  count(category) %>%
+  ggplot(aes(x = category, y = n, color = category, group = 1)) +  
+  geom_line() +
+  geom_point(size = 3) +
+  geom_text(aes(label = n), vjust = 2, color = "black") +
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  scale_color_manual(values = rainbow(length(unique(crime23_data$category)))) +  # Specify colors
+  labs(title = "Count of Each Category",
+       x = "Category",
+       y = "Count")
+```
+
+The most prevalent crime category is violent crime, with an incident count of 2,633. This alarmingly high number indicates that violent offenses should be the top priority for local authorities to address through enhanced prevention and intervention measures.
+Following violent crime, the next highest category is anti-social behavior, with 677 incidents. This suggests that issues related to public order disturbances and social problems are also a significant concern that requires focused attention.
+Vehicle-related crimes, including vehicle-person-theft with 406 incidents and bicycle-theft with 235 incidents, account for a combined total of 641 cases. This highlights the need for targeted strategies to prevent and reduce property crimes against vehicles.
+
+Theft-related offenses, such as shoplifting with 554 incidents, other-theft with 491 incidents, and theft-from-the-person with 76 incidents, collectively make up a sizable portion of the crimes recorded. Addressing these types of theft should be an important focus area.
+Criminal damage and arson incidents total 581, while burglary accounts for 225 crimes, indicating the prevalence of property-related destruction and break-ins that require dedicated efforts.
+
+Other noteworthy categories include public-order issues with 532 incidents, drug-related crimes with 208 incidents, and robbery with 94 incidents, all of which warrant attention and tailored interventions.
+This analysis can guide the allocation of resources, the implementation of targeted crime prevention strategies, and the overall enhancement of public safety.
+
+```{r}
+outcome_status_plt <- ggplot(crime23_data, aes(x = outcome_status,fill = outcome_status)) +
+  geom_bar( width = 0.5) +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5, color = "black") +  
+  scale_x_discrete(guide = guide_axis(angle = 30)) +
+  labs(title = "Distribution of outcomes",
+       x = "Outcome Status",
+       y = "Count") +
+  theme_minimal() 
+ # theme(axis.text.x = element_text(angle = 10, vjust = 0.5))  
+
+print(outcome_status_plt)
+```
+
+The most common outcome is "Investigation complete: no suspect identified" with 2,656 incidents, indicating a lack of suspects in many cases."Unable to prosecute suspect" follows with 1,959 incidents, showing challenges in prosecution. 677 incidences of "NA" (Not Available) denote incomplete outcome data. There are 439 incidents listed as "under investigation," which represents pending cases. Other notable outcomes include "Suspect charged as part of another case" (1,959 incidents), "Status update unavailable" (177 incidents), and "Local resolution" (239 incidents). "Action to be taken by another organization" (104 incidents), "Formal action is not in the public interest" (9 incidents), and "Further action is not in the public interest" (82 incidents) are less common outcomes.
+
+
+```{r}
+# Create pie chart data
+crime23_data_pie <- as.data.frame(table(crime23_data$category))
+
+
+# Assuming crime_data_pie$Freq contains the frequencies and crime_data_pie$Var1 contains the category labels
+
+# Plotting pie chart with values
+
+pie(crime23_data_pie$Freq, labels = paste(crime23_data_pie$Var1, "(", crime23_data_pie$Freq, ")", sep = ""), 
+    main = "Crime Category Pie Chart",
+    cex.main = 1.5, cex = 1.2)
+
+```
+
+According to the pie chart, violent crimes constitute a significant portion, with a value of 2633. Shoplifting (554) and vehicle-related crimes (406) also have comparatively high rates. Other notable crimes include robbery (94) and theft-from-the-person (76).
+Weapons possession (74) and public order violations (532) are represented, pointing to problems with illegal and public safety. There are also general other crimes (92) and various types of stealing (491), indicating a variety of other illegal actions.
+
+The number of drug-related crimes (208) is shown, indicating how common drug usage is and how many illegal activities are linked with it. Criminal damage-arson (581), which probably refers to intentional fire-setting acts and harm to property-is mentioned together with criminal damage.
+
+Burglary (225) and bicycle theft (235) are separate categories, highlighting the occurrence of break-ins and theft of personal transportation modes. Interestingly, anti-social behavior (677) is very valuable and may include harassment violations, public problems, and disruptive behavior.
+
+This data can be used to guide targeted strategies to increase community safety and address the root causes of criminal behavior.
+
+
+```{r,include=TRUE}
+
+# Dot plot (requires additional data manipulation)
+dot_plt<-ggplot(crime23_data, aes(x = date, y = location_type)) +
+  geom_point() +
+  labs(title = "Dot Plot of Crime Incidents by Location Type in Colchester",
+       x = "Date",
+       y = "Location Type") +
+  theme_classic()
+
+print(dot_plt)
+```
+
+In this dot plot of crime incidents by location type to be a compelling visual tool for understanding the distribution and patterns of criminal activities within a given timeframe. The plot effectively conveys the relationships between the date, location type, and the occurrence of crime incidents.
+
+One of the most important findings is that criminal incidents are consistently present across the "Force" location type over the whole date range, with a relatively even distribution of dots along the timeline. This suggests this specific location category has a continuous degree of criminal activity.
+In contrast, the "BTP" (British Transport Police) location type exhibits a more sporadic pattern, with a smaller number of incidents concentrated in specific date ranges. This may suggest that crimes involving transportation are more concentrated or connected to particular occasions or situations. 
+
+This dot plot gives an excellent visualization of the spatial and temporal distribution of the reported crimes, even though it does not specifically display the frequency or severity of the incidents. This information could be valuable in guiding targeted interventions, resource allocation, and the development of more effective crime prevention strategies. 
+
+```{r,include=TRUE}
+# Density plot
+density_plt<-ggplot(crime23_data, aes(x = date)) +
+  geom_density(fill = "skyblue", color = "black") +
+  labs(title = "Density Plot of Crime Incidents by Date in Colchester",
+       x = "Date",
+       y = "Density") +
+  theme_minimal()
+
+print(density_plt)
+
+```
+
+The density of criminal instances over a given time period is shown in the graph with a clear trend. With a peak value of almost 1.5 events per unit of time, the data indicates that the density of criminal incidents is highest around the start of the year. Following this first high, the density of occurrences progressively declines, reaching a low point near the end of the year of about 0.05 incidents per unit of time. 
+The graph's general bell-curve form suggests that crime incidences follow a normal distribution pattern, with most incidents happening around the start of the year and progressively decreasing over time. 
+
+Understanding the local crime trends over time with the help of this data may be helpful, and law enforcement organizations may find it useful in developing plans for preventing crimes or allocating resources.
+
+```{r,include=TRUE}
+
+# Histogram
+
+# Histogram of Latitude
+
+hist_of_lat<-ggplot(crime23_data, aes(x = lat, fill = ..x..)) +
+  geom_histogram( color = "black", bins = 30) +
+  labs(title = "Histogram of Latitude", x = "Latitude", y = "Frequency")
+hist_plt <- ggplotly(hist_of_lat)
+
+hist_plt
+
+```
+
+One of the most striking features of the histogram is that we can quickly see the specific latitude that each bar represents when we click on it. Or, as you move your mouse over each bar, watch as the chart tells you the latitude value right where you're pointing. It's dynamic, interactive, and full of discoveries—just like having a conversation with the data.
+
+In the histogram, we can see the prominent peak around the latitude value of 51.88885, with a frequency of approximately 900 frequency. It also suggests that a considerable amount of the data is centered in this particular geographic area. There is a rather normal distribution with fewer occurrences at higher and lower latitudes, as indicated by the gradual tapering off on either side of this peak.
+
+The lower, but still significant, peak at latitude 51.90 is another interesting finding.This secondary cluster of data points suggests that there may be multiple regions of interest or focal areas within the overall dataset.
+Several smaller, more scattered peaks at different latitude values, from around 51.88 to 51.90, are also visible on the histogram. These smaller spikes in frequency could represent specific points of interest or locations that warrant further investigation.
+
+
+```{r,include=TRUE}
+#Need to download this library plotly
+
+#install.packages("plotly")
+library(plotly)
+
+median(crime23_data$lat)
+# Scatter Plot
+#scatter plot with a smoothed trendline for latitude and longitude
+scatter_smooth_plt <- ggplot(crime23_data, aes(x = long, y = lat)) +
+  geom_point(alpha=0.5,color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Scatter Plot of Latitude vs Longitude with Trendline", x = "Longitude", y = "Latitude")
+plotly_plot <- ggplotly(scatter_smooth_plt)
+plotly_plot
+
+
+
+
+```
+
+The scatter plot, which is based on latitude and longitude data, shows the spatial distribution of Colchester 2023 places. It displays a large range of longitude (0.88 to 0.92) and latitude (51.875 to 51.905) values. The figure is filled with scattered data points, with a dense cluster in the middle and sparser spots near the edges. Latitude and longitude are inversely correlated, as seen by a trendline with a negative slope.This suggests that latitude tends to decrease and vice versa when longitude rises.
+In addition, this interactive plot provides more functionality, allowing users to click on or move over individual data points to get specific details. Important details, like the exact longitude and latitude coordinates linked to the chosen point, are displayed with every movement or click. so we can understand this plot easily. 
+
+```{r,include=TRUE}
+#Violin Plot
+
+violin_plt <- ggplot(crime23_data, aes(x = category, y = lat, fill = category)) +
+  geom_violin() +
+  labs(title = "Violin Plot of Incident Distribution by Category", x = "Category", y = "Latitude") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+plt <- ggplotly(violin_plt)
+
+plt
+
+
+```
+
+The plot is a violin plot, which uses violin-shaped distributions to display the probability density of data across different categories. The latitude numbers are displayed on the y-axis and range roughly from 51.875 to 51.905, indicating that the data comes from a particular location in  Colchester 2023.
+
+The violin shapes for categories like "criminal-damage-arson" and "drugs" have their highest densities around latitude 51.9, indicating a higher concentration of incidents related to these crimes in areas represented by the higher latitudes.
+On the other hand, categories including "theft-from-the-person," "vehicle-crime," and "shoplifting" have higher densities around the lower end of the latitude range, or 51.88.
+
+The distribution patterns of various crime types across latitudes are efficiently visualized by this violin plot, which enables us to identify possible hotspots or regions that need special attention for particular categories within the place under investigation. Also,as we move the mouse over the plot, little boxes pop up, showing you details about each group. This helps you understand the data better.
+
+```{r}
+
+# Correlation Analysis
+
+# Calculate the correlation between latitude and longitude
+cor_matrix <- cor(crime23_data[, c("lat", "long")])
+print(cor_matrix)
+```
+
+```{r}
+ggpairs(crime23_data[, c("lat", "long", "date")], title_size = 19)
+
+```
+
+The analysis reveals distinct spatial and temporal patterns within the dataset. Dates are uniformly distributed, latitude is concentrated around 100, and longitude exhibits dual trends. The coordinates (51.89, 0.89) are the core of a dense cluster of data points. Data subset variations are represented by parallel coordinate plots, and uniform and variable distributions are shown by bar charts. A minimal relationship is suggested by the slight negative correlation (-0.090) between latitude and longitude. A uniform distribution within the interquartile range is also indicated by the box plot's lack of outliers.
+
+
+```{r}
+# Time Series Plot
+
+#First need to download this "zoo" library for "yearmon" function
+
+#install.packages("zoo")
+library(zoo)
+
+# Extract year and month from the date column
+crime23_data$year_month <- as.yearmon(crime23_data$date)
+
+# Count number of crimes per year-month
+crime23_counts <- crime23_data %>%
+  group_by(year_month) %>%
+  summarise(crime23_count = n())
+
+# Plotting number of crimes per year-month
+ggplot(crime23_counts, aes(x = year_month, y = crime23_count)) +
+  geom_line(color = "blue") +
+  geom_smooth(method = "loess", color = "red") +
+  labs(title = "Number of Crimes per Year-Month", x = "Year-Month", y = "Crime Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+```
+
+The red line, representing a specific type of crime, it starts at around 590 specific type of crime in January 2023, then drops sharply to around 550 in March 2023, before rising again to around 580 in May 2023.
+
+The red line then experiences many fluctuations, and the line touches 590 incidents, the same as in January 2023 and in September 2023, reaching its lowest point of around 540 crimes after October 2023. This suggests that the specific type of crime represented by the red line experienced a notable decrease during this period.
+
+The blue line shows a more volatile pattern compared to the red line. Looking at the data, we can observe that the crime rate starts relatively high in January 2023, reaching around 650 incidents. However, it then decreases gradually, hitting a low point of around 430 crimes in February 2023. The crime rate then rises again, peaking in May 2023 at approximately 551 incidents. After this peak, there were many ups and downs in every month, then the number of crimes touched around 640 incidents in September 2023, and again, the number of crimes declined once more, reaching around 580 in October 2023. This downward trend indicates that the crime rate was decreasing towards the latter part of the year.
+
+The variations in the blue and red lines suggest that the frequency of criminal activity in the area is influenced by other or seasonal causes. By recognizing these trends, authorities can better target their resources and create methods for preventing crime.
+
+The "zoo" library provides features for effectively managing time-series data.Data for each month is represented by the "yearmon" class.
+```{r}
+
+#need to download this Libraries 
+#install.packages("ggmap")
+library(ggmap)
+#install.packages("leaflet")
+library(leaflet)
+# Map Visualization
+map <- leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(
+    data = crime23_data,
+    lng = ~long,
+    lat = ~lat,
+    radius = 3,
+    color = "red",
+    popup = paste("Category: ", crime23_data$category, "<br>",
+                  "Date: ", crime23_data$date, "<br>",
+                  "Outcome: ", crime23_data$outcome, "<br>",
+                  "Location: ", crime23_data$location)
+  )
+
+# Display the map
+map
+
+
+```
+
+The map visualization displays incident locations using a mapping tool. Each marker on the map corresponds to a specific incident location, showing its geographical position. When clicked, the markers provide information about the incident category. This interactive map offers a visual representation of incident distribution, enabling easy identification of geographic clusters or patterns within the dataset.
+
+
+### Conclusions
+
+In short, we study of the Crime23 data has helped us learn more about when and where crimes happen in a specific area. By analyzing the data, we've discovered some trends that could help us figure out ways to stop crime. Moving forward, it's important to use This information is critical for police, leaders, and communities because it allows them to better plan crime prevention and make better use of their resources to keep people safe.
+
+
+
